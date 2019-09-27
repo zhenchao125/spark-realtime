@@ -4,8 +4,10 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
+import com.atguigu.realtime.app.BlackListApp
 import com.atguigu.realtime.bean.AdsInfo
-import org.apache.spark.sql.SparkSession
+import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo
+import org.apache.spark.sql.{Dataset, SparkSession}
 
 /**
   * Author lzc
@@ -24,7 +26,7 @@ object RealtimeApp1 {
         val dayFormatter = new SimpleDateFormat("yyyy-MM-dd")
         val hmFormatter = new SimpleDateFormat("HH:mm")
         
-        val adsInfoDS = spark.readStream
+        val adsInfoDS: Dataset[AdsInfo] = spark.readStream
             .format("kafka")
             .option("kafka.bootstrap.servers", "hadoop201:9092,hadoop202:9092,hadoop203:9092")
             .option("subscribe", "ads_log")
@@ -45,15 +47,12 @@ object RealtimeApp1 {
                     arr(4)
                 )
             })
-        
-        
-        adsInfoDS.writeStream
-            .format("console")
-            .outputMode("update")
-            .start
-            .awaitTermination()
-        
+            
         
         //2. 需求1: 黑名单
+        val filteredAdsInfoDS = BlackListApp.statBlackList(spark, adsInfoDS)
+        
+        // 需求2:
+        
     }
 }
