@@ -4,7 +4,7 @@ import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import com.atguigu.realtime.app.BlackListApp
+import com.atguigu.realtime.app.{AdsClickCountApp, BlackListApp}
 import com.atguigu.realtime.bean.AdsInfo
 import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo
 import org.apache.spark.sql.{Dataset, SparkSession}
@@ -47,12 +47,12 @@ object RealtimeApp1 {
                     arr(4)
                 )
             })
-            
         
         //2. 需求1: 黑名单
-        val filteredAdsInfoDS = BlackListApp.statBlackList(spark, adsInfoDS)
+//        val filteredAdsInfoDS: Dataset[AdsInfo] = BlackListApp.statBlackList(spark, adsInfoDS)
         
         // 需求2:
+        AdsClickCountApp.statClickCount(spark, adsInfoDS)
         
     }
 }
