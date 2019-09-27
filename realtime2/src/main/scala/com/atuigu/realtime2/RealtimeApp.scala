@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import com.atguigu.realtime.bean.AdsInfo
+import com.atuigu.realtime2.app.{AreaAdsClickTop3, LastHourAdsClickApp}
 import com.atuigu.realtime2.util.MyKafkaUtil
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.spark.SparkConf
@@ -19,7 +20,7 @@ object RealtimeApp {
     def main(args: Array[String]): Unit = {
         val conf: SparkConf = new SparkConf().setMaster("local[*]").setAppName("HighKafka")
         val ssc: StreamingContext = new StreamingContext(conf, Seconds(5))
-        
+        ssc.checkpoint("./ck-ss1")
         val dayFormatter: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
         val hmFormatter: SimpleDateFormat = new SimpleDateFormat("HH:mm")
         val adsInfoDStream: DStream[AdsInfo] =  MyKafkaUtil.getKafkaStream(ssc, "ads_log").map(record => {
@@ -37,7 +38,9 @@ object RealtimeApp {
             )
         })
         // 1. 需求1: 每天每地区热门广告 Top3
-        
+//        AreaAdsClickTop3.statAearAdsClick(adsInfoDStream)
+        // 2.
+        LastHourAdsClickApp.statLastHourClick(adsInfoDStream)
         ssc.start()
         ssc.awaitTermination()
     }

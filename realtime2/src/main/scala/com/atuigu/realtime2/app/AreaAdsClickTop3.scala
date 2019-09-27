@@ -1,7 +1,10 @@
 package com.atuigu.realtime2.app
 
 import com.atguigu.realtime.bean.AdsInfo
+import com.atguigu.realtime.util.RedisUtil
 import org.apache.spark.streaming.dstream.DStream
+import org.json4s.jackson.JsonMethods
+import redis.clients.jedis.Jedis
 
 /**
   * Author lzc
@@ -9,13 +12,46 @@ import org.apache.spark.streaming.dstream.DStream
   */
 object AreaAdsClickTop3 {
     def statAearAdsClick(adsInfoDStream: DStream[AdsInfo]) = {
-        val value: DStream[((String, String, String), Int)] = adsInfoDStream
-            .map(adsInfo => ((adsInfo.dayString, adsInfo.area, adsInfo.adsId), 1))
-            .updateStateByKey((seq: Seq[Int], option: Option[Int]) => {
-                Some(seq.sum + option.getOrElse(0))
-            })
+        val dayAreaAndAdsCountDStream: DStream[((String, String), (String, Int))] = adsInfoDStream
+            .map(adsInfo => ((adsInfo.dayString, adsInfo.area, adsInfo.adsId), 1)) // ((day, area, adsId), 1)
+            .updateStateByKey((seq: Seq[Int], option: Option[Int]) => { // ((day, area, adsId), 1000)
+            Some(seq.sum + option.getOrElse(0))
+        })
+            .map {
+                case ((day, area, adsId), count) => ((day, area), (adsId, count))
+            }
         
-        
+        // 分组, 排序, top3
+        val dayAreaAdsClickCountTop3: DStream[(String, String, List[(String, Int)])] = dayAreaAndAdsCountDStream.groupByKey
+            .map {
+                case ((day, area), adsIdCountItable) => {
+                    (day, area, adsIdCountItable.toList.sortBy(-_._2).take(3))
+                }
+            }
+        // 写到redis中
+        dayAreaAdsClickCountTop3.foreachRDD(rdd => {
+            
+            val client: Jedis = RedisUtil.getJedisClient
+            
+            // 数据量已经很小, 所以可以在驱动端统一写出
+            val arr: Array[(String, String, List[(String, Int)])] = rdd.collect
+            /*arr.foreach {
+                case (day, area, adsCountList) => {
+                    
+                    import org.json4s.JsonDSL._
+                    client.hset(s"area:ads:top3:$day", area, JsonMethods.compact(JsonMethods.render(adsCountList)))
+                }
+            }*/
+            
+            import org.json4s.JsonDSL._
+            import scala.collection.JavaConversions._
+            val resultMap = arr.map{
+                case (day, area, list) => (area, JsonMethods.compact(JsonMethods.render(list)))
+            }.toMap
+            client.hmset(s"area:ads:top3:${arr(0)._1}", resultMap)  // 批量写法
+            
+            client.close()
+        })
     }
 }
 
