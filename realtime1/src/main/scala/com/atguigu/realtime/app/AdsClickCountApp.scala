@@ -17,13 +17,11 @@ object AdsClickCountApp {
             .count()
         
         resultDF.writeStream
-            
             .outputMode("complete")
             .foreachBatch((df, bachId) => {
-                
                 df.persist()
                 if (df.count() > 0) {
-                    
+                    // 读取黑名单, 删除黑名单的计数记录
                     println("df count > 0")
                     df.foreachPartition(rowIt => {
                         val client: Jedis = RedisUtil.getJedisClient
@@ -37,7 +35,7 @@ object AdsClickCountApp {
                             (s"$area:$city:$adsId", count.toString)
                         }).toMap
                         import scala.collection.JavaConversions._
-                        if (hashValue.size > 0)
+                        if (hashValue.nonEmpty)  //
                             client.hmset(s"date:area:city:ads:$dayString", hashValue)
                         client.close()
                     })

@@ -11,6 +11,7 @@
     <modules>
         <module>mock</module>
         <module>realtime1</module>
+        <module>realtime2</module>
     </modules>
     <dependencies>
         <dependency>
