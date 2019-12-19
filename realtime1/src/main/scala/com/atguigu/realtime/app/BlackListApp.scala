@@ -21,6 +21,7 @@ object BlackListApp {
             val client: Jedis = RedisUtil.getJedisClient
             // 黑名单
             val blacList: util.Set[String] = client.smembers(s"blacklist:${adsInfoList(0).dayString}")
+            client.close()
             // 过滤
             adsInfoList.filter(adsInfo => !blacList.contains(adsInfo.userId)).toIterator
         })
